@@ -1,7 +1,9 @@
 # My dotfiles
 
 This will be the home for all my configurations
-
+## Windows Terminal
+For this I am using [Oh My Posh](https://ohmyposh.dev/)
+More info about config is [here](/others/terminal/ohmyposh.md)
 ## Neovim setup
 ### Features
 - [wbthomason/packer](https://github.com/wbthomason/packer.nvim): A use-package inspired plugin manager for Neovim.
