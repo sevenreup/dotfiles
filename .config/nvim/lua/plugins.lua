@@ -67,6 +67,23 @@ return packer.startup(function(use)
         },
     })
 
+	-- Themes
+	use({ 
+		"catppuccin/nvim", 
+		as = "catppuccin",
+		config = function()
+			require("configs.catppuccin")
+		end,
+	 })
+
+	 -- Background Transparent
+	use({
+		"xiyaowong/nvim-transparent",
+		config = function()
+			require("configs.transparent")
+		end, 
+	})
+
 
 	if PACKER_BOOTSTRAP then
 		require("packer").sync()
