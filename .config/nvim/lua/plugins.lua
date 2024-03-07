@@ -49,6 +49,17 @@ return packer.startup(function(use)
 	 -- Icons
 	 use("nvim-tree/nvim-web-devicons")
 
+	 -- Treesitter
+	 use({
+        "nvim-treesitter/nvim-treesitter",
+        run = function()
+            require("nvim-treesitter.install").update({ with_sync = true })
+        end,
+        config = function()
+            require("configs.treesitter")
+        end,
+    })
+
 	  -- Telescope
 	  use({
         "nvim-telescope/telescope.nvim",
@@ -84,6 +95,36 @@ return packer.startup(function(use)
 		end, 
 	})
 
+	use({
+        "neovim/nvim-lspconfig",
+		requires = {
+			'williamboman/mason.nvim',
+			'williamboman/mason-lspconfig.nvim',
+			'WhoIsSethDaniel/mason-tool-installer.nvim',
+        },
+        config = function()
+            require("configs.lsp")
+        end,
+    })
+
+	use("folke/todo-comments.nvim")
+
+	use({
+		"mfussenegger/nvim-dap",
+		requires = {
+			'rcarriga/nvim-dap-ui',
+
+			-- Installs the debug adapters for you
+			'williamboman/mason.nvim',
+			'jay-babu/mason-nvim-dap.nvim',
+
+			-- Add your own debuggers here
+			'leoluz/nvim-dap-go',
+		},
+		config = function()
+			require("configs.debug")
+		end,
+	})
 
 	if PACKER_BOOTSTRAP then
 		require("packer").sync()

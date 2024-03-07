@@ -1,4 +1,5 @@
 require("plugins")
+require("settings")
 
 local themeStatus, catppuccin = pcall(require, "catppuccin")
 
