@@ -1,2 +1,7 @@
 .config/nvim/plugin
 dump
+.Trashes
+.Spotlight-V100
+.fseventsd
+Thumbs.db
+.DS_Store

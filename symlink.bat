@@ -1,2 +1,2 @@
 @REM Neovim symlink
-mklink /J %LocalAppData%\nvim %cd%\.config\nvim
+mklink /J %LocalAppData%\nvim %cd%\configs\.config\nvim
