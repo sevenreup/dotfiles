@@ -21,6 +21,15 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}Setting up dotfiles...${NC}"
 
+# Run platform-specific setup
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo -e "${BLUE}Detected macOS. Running macOS-specific setup...${NC}"
+    "$SCRIPT_DIR/mac/setup.sh"
+elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
+    echo -e "${BLUE}Detected Windows. Running Windows-specific setup...${NC}"
+    "$SCRIPT_DIR/windows/setup.sh"
+fi
+
 # Check if source .config directory exists
 if [ ! -d "$SOURCE_CONFIG_DIR" ]; then
     echo -e "${RED}Error: Source directory '$SOURCE_CONFIG_DIR' does not exist.${NC}"
