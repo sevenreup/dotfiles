@@ -3,7 +3,7 @@
 # Generic dotfiles setup script
 # This script creates symbolic links from all folders in configs/.config/ to ~/.config/
 
-set -e  # Exit on any error
+set -o pipefail  # Catch errors in pipelines
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,10 +24,10 @@ echo -e "${BLUE}Setting up dotfiles...${NC}"
 # Run platform-specific setup
 if [[ "$OSTYPE" == "darwin"* ]]; then
     echo -e "${BLUE}Detected macOS. Running macOS-specific setup...${NC}"
-    "$SCRIPT_DIR/mac/setup.sh"
+    "$SCRIPT_DIR/mac/setup.sh" || echo -e "${RED}macOS setup script failed.${NC}"
 elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
     echo -e "${BLUE}Detected Windows. Running Windows-specific setup...${NC}"
-    "$SCRIPT_DIR/windows/setup.sh"
+    "$SCRIPT_DIR/windows/setup.sh" || echo -e "${RED}Windows setup script failed.${NC}"
 fi
 
 # Check if source .config directory exists
@@ -61,6 +61,7 @@ handle_existing() {
 
 # Counter for successful links
 success_count=0
+fail_count=0
 total_count=0
 
 # Loop through all items in the source .config directory
@@ -94,9 +95,11 @@ for item in "$SOURCE_CONFIG_DIR"/*; do
             ((success_count++))
         else
             echo -e "${RED}  ✗ Failed to verify link for '$name'${NC}"
+            ((fail_count++))
         fi
     else
         echo -e "${RED}  ✗ Failed to create link for '$name'${NC}"
+        ((fail_count++))
     fi
 
     echo
@@ -105,11 +108,15 @@ done
 # Summary
 echo -e "${BLUE}Setup Summary:${NC}"
 echo -e "  Successfully linked: ${GREEN}$success_count${NC} out of ${BLUE}$total_count${NC} items"
+if [ $fail_count -gt 0 ]; then
+    echo -e "  Failed: ${RED}$fail_count${NC} item(s)"
+fi
 
 if [ $success_count -eq $total_count ] && [ $total_count -gt 0 ]; then
     echo -e "${GREEN}✓ All dotfiles setup complete!${NC}"
 elif [ $total_count -eq 0 ]; then
     echo -e "${YELLOW}No configuration folders found in '$SOURCE_CONFIG_DIR'${NC}"
 else
-    echo -e "${YELLOW}Some items may have failed. Check the output above.${NC}"
+    echo -e "${RED}✗ Some items failed. See errors above.${NC}"
+    exit 1
 fi
