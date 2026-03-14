@@ -81,8 +81,16 @@ for item in "$SOURCE_CONFIG_DIR"/*; do
     # Increment total counter
     ((total_count++))
 
+    # Skip if symlink already points to the correct source
+    if [ -L "$target_path" ] && [ "$(readlink "$target_path")" = "$source_path" ]; then
+        echo -e "${GREEN}  ✓ Already linked '$name', skipping${NC}"
+        ((success_count++))
+        echo
+        continue
+    fi
+
     # Handle existing files/directories/symlinks
-    if [ -e "$target_path" ]; then
+    if [ -e "$target_path" ] || [ -L "$target_path" ]; then
         handle_existing "$target_path" "$name"
     fi
 
