@@ -62,10 +62,22 @@
 
   "battery": {
     "format": "{icon} {capacity}%",
-    "format-icons": ["", "", "", "", ""],
+    "format-charging": "󰂔 {capacity}%",
+    "format-plugged": "󰨥 {capacity}%",
+    "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+    "states": {
+      "warning": 30,
+      "critical": 15,
+    },
   },
 
-  "network": { "format-wifi": " " },
+  "network": {
+    "format-wifi": "ï« ",
+    "format-disconnected": "󰤵 ",
+    "format-ethernet": "󰘀 ",
+    "on-click": "nm-connection-editor",
+    "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+  },
   "bluetooth": { "format": "󰂯" },
   "custom/power": { "format": "", "on-click": "wlogout" },
 }

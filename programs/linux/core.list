@@ -1,10 +1,15 @@
 p waybar
 p rofi
 p swaync
+p hyprlock
+p hypridle
 y google-chrome
-y zed
 p blueman
 y wlogout
+
+# Editors
+y zed
+y cursor-bin
 
 # Screenshots
 # y grim # screenshot tool

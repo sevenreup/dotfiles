@@ -1,4 +1,9 @@
-p github-cli
-y claude-code
+# media
 y spotify
 y spicetify-cli
+
+p github-cli
+
+# AI tools
+y claude-code
+y openai-codex
