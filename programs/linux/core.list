@@ -5,3 +5,10 @@ y google-chrome
 y zed
 p blueman
 y wlogout
+
+# Screenshots
+# y grim # screenshot tool
+# y slurp # region selection
+y hyprshot # with this I dont need grim and slurp
+y hyprshot # annotation
+y cliphist

@@ -13,6 +13,8 @@ window#waybar {
     background: @mantle;
 }
 
+/* ── Workspaces ─────────────────────────────────────────── */
+
 #workspaces {
     background-color: @crust;
     margin: 8px 10px;
@@ -28,13 +30,25 @@ window#waybar {
     min-height: 18px;
     font-size: 12px;
     transition: all 0.2s ease;
+    border-radius: 50%;
+}
+
+#workspaces button:hover {
+    background-color: alpha(@primary, 0.2);
+    color: @primary;
 }
 
 #workspaces button.active {
     background-color: @primary;
     color: @on_primary;
-    border-radius: 50%;
 }
+
+#workspaces button.urgent {
+    background-color: @red;
+    color: @base;
+}
+
+/* ── Shared module padding ──────────────────────────────── */
 
 #custom-launcher,
 #window,
@@ -49,7 +63,87 @@ window#waybar {
 #custom-power,
 #custom-performance {
     padding: 0 12px;
-    margin: 4px 0px;
+    margin: 4px 0;
+}
+
+/* ── Left modules ───────────────────────────────────────── */
+
+#custom-launcher {
+    color: @mauve;
+    font-size: 18px;
+    padding-right: 4px;
+}
+
+#window {
+    color: @subtext1;
+    font-style: italic;
+    font-weight: 400;
+}
+
+/* ── Center modules ─────────────────────────────────────── */
+
+#cpu {
+    color: @peach;
+}
+
+#cpu.critical {
+    color: @red;
+}
+
+#memory {
+    color: @blue;
+}
+
+#mpris {
+    color: @pink;
+}
+
+#custom-cava {
+    color: @teal;
+}
+
+#clock {
+    color: @lavender;
+}
+
+#custom-performance {
+    color: @yellow;
+}
+
+/* ── Battery ────────────────────────────────────────────── */
+
+#battery {
+    color: @green;
+}
+
+#battery.charging {
+    color: @teal;
+}
+
+#battery.warning:not(.charging) {
+    color: @yellow;
+}
+
+#battery.critical:not(.charging) {
+    color: @red;
+}
+
+/* ── Right modules ──────────────────────────────────────── */
+
+#network {
+    color: @sapphire;
+}
+
+#network.disconnected {
+    color: @overlay0;
+}
+
+#bluetooth {
+    color: @blue;
+}
+
+#bluetooth.disabled {
+    color: @overlay0;
 }
 
 #custom-power {
@@ -57,23 +151,9 @@ window#waybar {
     font-size: 16px;
 }
 
-#battery {
-    color: @green;
-}
-
-#battery.charging {
-    color: @green;
-}
-
-#battery.warning:not(.charging) {
-    color: @red;
-}
+/* ── Backlight ──────────────────────────────────────────── */
 
 #backlight {
     color: @yellow;
-}
-
-#backlight,
-#battery {
     border-radius: 0;
 }

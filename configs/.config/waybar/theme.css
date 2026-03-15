@@ -1,1 +1,5 @@
 @import "themes/catpuccin/mocha.css";
+
+/* Semantic aliases */
+@define-color primary #cba6f7;   /* mauve */
+@define-color on_primary #1e1e2e; /* base */
