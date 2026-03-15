@@ -131,7 +131,21 @@ window#waybar {
 /* ── Right modules ──────────────────────────────────────── */
 
 #network {
-    color: @sapphire;
+    color: @subtext1;
+}
+
+#network.wifi {
+    color: @base;
+    background-color: @sapphire;
+    border-radius: 20px;
+    padding: 0 14px;
+}
+
+#network.ethernet {
+    color: @base;
+    background-color: @teal;
+    border-radius: 20px;
+    padding: 0 14px;
 }
 
 #network.disconnected {
@@ -139,7 +153,14 @@ window#waybar {
 }
 
 #bluetooth {
-    color: @blue;
+    color: @subtext1;
+}
+
+#bluetooth.connected {
+    color: @base;
+    background-color: @blue;
+    border-radius: 20px;
+    padding: 0 14px;
 }
 
 #bluetooth.disabled {

@@ -72,12 +72,20 @@
   },
 
   "network": {
-    "format-wifi": "ï« ",
+    "format-wifi": "󰤨",
     "format-disconnected": "󰤵 ",
     "format-ethernet": "󰘀 ",
     "on-click": "nm-connection-editor",
-    "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+    "tooltip-format-wifi": "{essid} ({signalStrength}%)
+IP: {ipaddr}",
   },
-  "bluetooth": { "format": "󰂯" },
+  "bluetooth": {
+    "format": "󰂯",
+    "format-connected": "󰂯",
+    "format-disabled": "󰂲",
+    "on-click": "blueman-manager",
+    "tooltip-format-connected": "{device_alias}",
+    "tooltip-format-enumerate-connected": "{device_alias}",
+  },
   "custom/power": { "format": "", "on-click": "wlogout" },
 }

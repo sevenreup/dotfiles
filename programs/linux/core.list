@@ -4,8 +4,13 @@ p swaync
 p hyprlock
 p hypridle
 y google-chrome
-p blueman
 y wlogout
+p nerd-fonts
+
+# Bluetooth
+p blueman
+p bluez
+p bluez-utils
 
 # Editors
 y zed
