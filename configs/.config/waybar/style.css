@@ -1,0 +1,79 @@
+@import "theme.css";
+
+* {
+    font-family: "JetBrainsMono Nerd Font", sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    color: @text;
+}
+
+window#waybar {
+    border-radius: 16px;
+    background: @mantle;
+}
+
+#workspaces {
+    background-color: @crust;
+    margin: 8px 10px;
+    border-radius: 20px;
+    padding: 0 4px;
+}
+
+#workspaces button {
+    color: alpha(@text, 0.3);
+    margin: 2px 2px;
+    padding: 0;
+    min-width: 18px;
+    min-height: 18px;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+#workspaces button.active {
+    background-color: @primary;
+    color: @on_primary;
+    border-radius: 50%;
+}
+
+#custom-launcher,
+#window,
+#cpu,
+#memory,
+#mpris,
+#custom-cava,
+#clock,
+#battery,
+#network,
+#bluetooth,
+#custom-power,
+#custom-performance {
+    padding: 0 12px;
+    margin: 4px 0px;
+}
+
+#custom-power {
+    color: @red;
+    font-size: 16px;
+}
+
+#battery {
+    color: @green;
+}
+
+#battery.charging {
+    color: @green;
+}
+
+#battery.warning:not(.charging) {
+    color: @red;
+}
+
+#backlight {
+    color: @yellow;
+}
+
+#backlight,
+#battery {
+    border-radius: 0;
+}
