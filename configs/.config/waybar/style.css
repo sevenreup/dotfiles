@@ -66,6 +66,29 @@ window#waybar {
     margin: 4px 0;
 }
 
+/* ── Taskbar ────────────────────────────────────────────── */
+
+#taskbar {
+    background-color: @crust;
+    border-radius: 20px;
+    margin: 8px 0;
+    padding: 0 4px;
+}
+
+#taskbar button {
+    padding: 0 6px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+#taskbar button:hover {
+    background-color: alpha(@mauve, 0.2);
+}
+
+#taskbar button.active {
+    background-color: alpha(@mauve, 0.3);
+}
+
 /* ── Left modules ───────────────────────────────────────── */
 
 #custom-launcher {
