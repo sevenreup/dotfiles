@@ -1,3 +1,4 @@
+# System
 p waybar
 p rofi
 p swaync
@@ -6,6 +7,7 @@ p hypridle
 y google-chrome
 y wlogout
 p nerd-fonts
+p brightnessctl
 
 # Bluetooth
 p blueman
@@ -22,3 +24,6 @@ y cursor-bin
 y hyprshot # with this I dont need grim and slurp
 y hyprshot # annotation
 y cliphist
+
+# Others
+y nwg-displays
