@@ -14,38 +14,51 @@ window#waybar {
 }
 
 /* ── Workspaces ─────────────────────────────────────────── */
-
-#workspaces {
-    background-color: @crust;
-    margin: 8px 10px;
-    border-radius: 20px;
-    padding: 0 4px;
-}
-
+/* Styling workspace */
+#workspaces,
 #workspaces button {
-    color: alpha(@text, 0.3);
-    margin: 2px 2px;
-    padding: 0;
-    min-width: 18px;
-    min-height: 18px;
-    font-size: 12px;
-    transition: all 0.2s ease;
-    border-radius: 50%;
+    /* border: 1px solid red; */
+    all: unset;
+}
+#workspaces {
+    /*background-color: @mantle; */
+    margin: 0px 6px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    background-color: #363a4f;
 }
 
-#workspaces button:hover {
-    background-color: alpha(@primary, 0.2);
-    color: @primary;
+#workspaces > button {
+    padding: 0px 15px 0px 10px;
+    font-weight: 900;
+    border-radius: 0px;
+    color: #f8eded;
 }
-
-#workspaces button.active {
-    background-color: @primary;
-    color: @on_primary;
+#workspaces > button.empty {
+    color: @overlay0;
+    /* border: 1px solid red; */
 }
-
-#workspaces button.urgent {
-    background-color: @red;
-    color: @base;
+#workspaces > button.visible {
+    color: @overlay0;
+    /* border: 1px solid red; */
+}
+#workspaces > button.active {
+    color: #ff8225;
+    background: alpha(@forth, 0.1);
+    border-bottom: 1px solid @overlay0;
+}
+#workspaces > button:hover {
+    background: alpha(#4c3bcf, 0.01);
+    color: #4c3bcf;
+}
+#workspaces > button:first-child {
+    border-radius: 8px 0px 0px 8px;
+    padding-left: 14px;
+}
+#workspaces > button:last-child {
+    border-radius: 0px 8px 8px 0px;
+    padding-right: 20px;
 }
 
 /* ── Shared module padding ──────────────────────────────── */
@@ -60,10 +73,11 @@ window#waybar {
 #battery,
 #network,
 #bluetooth,
+#custom-swaync,
 #custom-power,
 #custom-performance {
-    padding: 0 12px;
-    margin: 4px 0;
+    padding: 0 10px;
+    margin: 6px 2px;
 }
 
 /* ── Taskbar ────────────────────────────────────────────── */
@@ -161,14 +175,14 @@ window#waybar {
     color: @base;
     background-color: @sapphire;
     border-radius: 20px;
-    padding: 0 14px;
+    padding: 0 12px;
 }
 
 #network.ethernet {
     color: @base;
     background-color: @teal;
     border-radius: 20px;
-    padding: 0 14px;
+    padding: 0 12px;
 }
 
 #network.disconnected {
@@ -183,10 +197,23 @@ window#waybar {
     color: @base;
     background-color: @blue;
     border-radius: 20px;
-    padding: 0 14px;
+    padding: 0 12px;
 }
 
 #bluetooth.disabled {
+    color: @overlay0;
+}
+
+#custom-swaync {
+    color: @subtext1;
+}
+
+#custom-swaync.notification {
+    color: @mauve;
+}
+
+#custom-swaync.dnd-none,
+#custom-swaync.dnd-notification {
     color: @overlay0;
 }
 

@@ -1,0 +1,7 @@
+[pyprland]
+plugins = ["lost_windows", "layout_center", "fetch_client_menu"]
+
+[layout_center]
+margin = 60
+next = "movefocus d"
+prev = "movefocus u"
