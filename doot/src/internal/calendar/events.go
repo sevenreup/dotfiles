@@ -45,6 +45,8 @@ func FetchMonth(year, month int) ([]*Event, error) {
 func fetchForAccount(acc *Account, start, end time.Time) ([]*Event, error) {
 	client, err := newBearerClient(acc.Username)
 	if err != nil {
+		fmt.Printf("[calendar] %s: token missing, removing account\n", acc.Username)
+		RemoveAccount(acc.Username)
 		return nil, fmt.Errorf("auth: %w", err)
 	}
 
