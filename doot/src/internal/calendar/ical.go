@@ -8,15 +8,9 @@ import (
 	ical "github.com/emersion/go-ical"
 )
 
-// parseEvents extracts Event objects from an iCalendar string.
+// parseEvents extracts Event objects from a decoded iCalendar object.
 // calColor and calName are applied as defaults when the event has no color.
-func parseEvents(icalData, accountUsername, calName, calColor string) ([]*Event, error) {
-	dec := ical.NewDecoder(strings.NewReader(icalData))
-	cal, err := dec.Decode()
-	if err != nil {
-		return nil, fmt.Errorf("ical decode: %w", err)
-	}
-
+func parseEvents(cal *ical.Calendar, accountUsername, calName, calColor string) ([]*Event, error) {
 	var events []*Event
 	for _, comp := range cal.Children {
 		if comp.Name != ical.CompEvent {

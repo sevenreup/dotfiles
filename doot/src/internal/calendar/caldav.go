@@ -1,251 +1,93 @@
 package calendar
 
 import (
-	"encoding/xml"
+	"context"
 	"fmt"
-	"io"
 	"net/http"
-	"strings"
+	"net/url"
 	"time"
+
+	ical "github.com/emersion/go-ical"
+	"github.com/emersion/go-webdav/caldav"
 )
 
-// CalendarInfo is a calendar returned from PROPFIND.
+// CalendarInfo holds calendar metadata returned from the server.
 type CalendarInfo struct {
 	Path  string
 	Name  string
 	Color string
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// PROPFIND: discover calendar home-set
-// ──────────────────────────────────────────────────────────────────────────────
-
-func discoverHomeSet(client *http.Client, principalURL string) (string, error) {
-	const body = `<?xml version="1.0" encoding="UTF-8"?>` +
-		`<D:propfind xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">` +
-		`<D:prop><C:calendar-home-set/></D:prop>` +
-		`</D:propfind>`
-
-	resp, err := propfind(client, principalURL, "0", body)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	type xmlHref struct {
-		Value string `xml:",chardata"`
-	}
-	type xmlHomeSet struct {
-		Hrefs []xmlHref `xml:"href"`
-	}
-	type xmlProp struct {
-		HomeSet *xmlHomeSet `xml:"calendar-home-set"`
-	}
-	type xmlPropstat struct {
-		Prop   xmlProp `xml:"prop"`
-		Status string  `xml:"status"`
-	}
-	type xmlResponse struct {
-		Propstats []xmlPropstat `xml:"propstat"`
-	}
-	type xmlMultistatus struct {
-		Responses []xmlResponse `xml:"response"`
-	}
-
-	var ms xmlMultistatus
-	if err := xml.NewDecoder(resp.Body).Decode(&ms); err != nil {
-		return "", fmt.Errorf("parse home-set response: %w", err)
-	}
-
-	for _, r := range ms.Responses {
-		for _, ps := range r.Propstats {
-			if !strings.Contains(ps.Status, "200") {
-				continue
-			}
-			if ps.Prop.HomeSet != nil && len(ps.Prop.HomeSet.Hrefs) > 0 {
-				href := ps.Prop.HomeSet.Hrefs[0].Value
-				return resolveURL(principalURL, href), nil
-			}
-		}
-	}
-	// Fall back: treat the principal URL's parent as the home set
-	return principalURL, nil
+// caldavConn wraps a go-webdav CalDAV client for a single account.
+type caldavConn struct {
+	client        *caldav.Client
+	principalPath string // path-only form of the principal URL (starts with "/")
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// PROPFIND: list calendars
-// ──────────────────────────────────────────────────────────────────────────────
+// newCaldavConn creates a CalDAV client. go-webdav's ResolveHref treats paths
+// starting with "/" as absolute on the server, so we split the principal URL
+// into origin (used as the client endpoint) and path.
+func newCaldavConn(httpClient *http.Client, principalURL string) (*caldavConn, error) {
+	u, err := url.Parse(principalURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse principal URL: %w", err)
+	}
+	origin := u.Scheme + "://" + u.Host
+	c, err := caldav.NewClient(httpClient, origin)
+	if err != nil {
+		return nil, fmt.Errorf("caldav client: %w", err)
+	}
+	return &caldavConn{client: c, principalPath: u.RequestURI()}, nil
+}
 
-func listCalendars(client *http.Client, homeSetURL string) ([]CalendarInfo, error) {
-	const body = `<?xml version="1.0" encoding="UTF-8"?>` +
-		`<D:propfind xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav" xmlns:A="http://apple.com/ns/ical/">` +
-		`<D:prop><D:resourcetype/><D:displayname/><A:calendar-color/></D:prop>` +
-		`</D:propfind>`
+func (c *caldavConn) discoverHomeSet(ctx context.Context) (string, error) {
+	return c.client.FindCalendarHomeSet(ctx, c.principalPath)
+}
 
-	resp, err := propfind(client, homeSetURL, "1", body)
+func (c *caldavConn) listCalendars(ctx context.Context, homeSet string) ([]CalendarInfo, error) {
+	cals, err := c.client.FindCalendars(ctx, homeSet)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-
-	type xmlCalendar struct {
-		XMLName xml.Name `xml:"calendar"`
+	result := make([]CalendarInfo, 0, len(cals))
+	for _, cal := range cals {
+		result = append(result, CalendarInfo{
+			Path:  cal.Path,
+			Name:  cal.Name,
+			Color: "#cba6f7",
+		})
 	}
-	type xmlResourceType struct {
-		Calendar *xmlCalendar `xml:"calendar"`
-	}
-	type xmlProp struct {
-		ResourceType  xmlResourceType `xml:"resourcetype"`
-		DisplayName   string          `xml:"displayname"`
-		CalendarColor string          `xml:"calendar-color"`
-	}
-	type xmlPropstat struct {
-		Prop   xmlProp `xml:"prop"`
-		Status string  `xml:"status"`
-	}
-	type xmlResponse struct {
-		Href      string        `xml:"href"`
-		Propstats []xmlPropstat `xml:"propstat"`
-	}
-	type xmlMultistatus struct {
-		Responses []xmlResponse `xml:"response"`
-	}
-
-	var ms xmlMultistatus
-	if err := xml.NewDecoder(resp.Body).Decode(&ms); err != nil {
-		return nil, fmt.Errorf("parse calendar list: %w", err)
-	}
-
-	var calendars []CalendarInfo
-	for _, r := range ms.Responses {
-		for _, ps := range r.Propstats {
-			if !strings.Contains(ps.Status, "200") {
-				continue
-			}
-			if ps.Prop.ResourceType.Calendar == nil {
-				continue // not a calendar resource
-			}
-			color := strings.TrimSpace(ps.Prop.CalendarColor)
-			if color == "" {
-				color = "#cba6f7"
-			}
-			// Strip alpha if present (e.g. "#3a7bd5ff" → "#3a7bd5")
-			if len(color) == 9 && color[0] == '#' {
-				color = color[:7]
-			}
-			calendars = append(calendars, CalendarInfo{
-				Path:  resolveURL(homeSetURL, r.Href),
-				Name:  ps.Prop.DisplayName,
-				Color: color,
-			})
-		}
-	}
-	return calendars, nil
+	return result, nil
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// REPORT: fetch events in time range
-// ──────────────────────────────────────────────────────────────────────────────
-
-func queryEvents(client *http.Client, calendarURL string, start, end time.Time) ([]string, error) {
-	tFmt := "20060102T150405Z"
-	body := `<?xml version="1.0" encoding="UTF-8"?>` +
-		`<C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">` +
-		`<D:prop><C:calendar-data/></D:prop>` +
-		`<C:filter>` +
-		`<C:comp-filter name="VCALENDAR">` +
-		`<C:comp-filter name="VEVENT">` +
-		`<C:time-range start="` + start.UTC().Format(tFmt) + `" end="` + end.UTC().Format(tFmt) + `"/>` +
-		`</C:comp-filter>` +
-		`</C:comp-filter>` +
-		`</C:filter>` +
-		`</C:calendar-query>`
-
-	req, err := http.NewRequest("REPORT", calendarURL, strings.NewReader(body))
+func (c *caldavConn) queryEvents(ctx context.Context, calPath string, start, end time.Time) ([]*ical.Calendar, error) {
+	query := &caldav.CalendarQuery{
+		CompRequest: caldav.CalendarCompRequest{
+			Name:     "VCALENDAR",
+			AllProps: true,
+			Comps: []caldav.CalendarCompRequest{{
+				Name:     "VEVENT",
+				AllProps: true,
+			}},
+		},
+		CompFilter: caldav.CompFilter{
+			Name: "VCALENDAR",
+			Comps: []caldav.CompFilter{{
+				Name:  "VEVENT",
+				Start: start,
+				End:   end,
+			}},
+		},
+	}
+	objects, err := c.client.QueryCalendar(ctx, calPath, query)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/xml; charset=utf-8")
-	req.Header.Set("Depth", "1")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("REPORT %s: %w", calendarURL, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
-	if resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("REPORT %s: HTTP %d", calendarURL, resp.StatusCode)
-	}
-
-	type xmlProp struct {
-		CalendarData string `xml:"calendar-data"`
-	}
-	type xmlPropstat struct {
-		Prop   xmlProp `xml:"prop"`
-		Status string  `xml:"status"`
-	}
-	type xmlResponse struct {
-		Propstats []xmlPropstat `xml:"propstat"`
-	}
-	type xmlMultistatus struct {
-		Responses []xmlResponse `xml:"response"`
-	}
-
-	var ms xmlMultistatus
-	if err := xml.NewDecoder(resp.Body).Decode(&ms); err != nil {
-		return nil, fmt.Errorf("parse REPORT response: %w", err)
-	}
-
-	var icals []string
-	for _, r := range ms.Responses {
-		for _, ps := range r.Propstats {
-			if !strings.Contains(ps.Status, "200") {
-				continue
-			}
-			if data := strings.TrimSpace(ps.Prop.CalendarData); data != "" {
-				icals = append(icals, data)
-			}
+	cals := make([]*ical.Calendar, 0, len(objects))
+	for i := range objects {
+		if objects[i].Data != nil {
+			cals = append(cals, objects[i].Data)
 		}
 	}
-	return icals, nil
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────────────────────────
-
-func propfind(client *http.Client, url, depth, body string) (*http.Response, error) {
-	req, err := http.NewRequest("PROPFIND", url, strings.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/xml; charset=utf-8")
-	req.Header.Set("Depth", depth)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("PROPFIND %s: %w", url, err)
-	}
-	if resp.StatusCode >= 300 && resp.StatusCode != http.StatusMultiStatus {
-		io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
-		return nil, fmt.Errorf("PROPFIND %s: HTTP %d", url, resp.StatusCode)
-	}
-	return resp, nil
-}
-
-// resolveURL combines a base URL with an href that may be absolute or path-only.
-func resolveURL(base, href string) string {
-	if strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") {
-		return href
-	}
-	// href is a path — extract scheme+host from base
-	parts := strings.SplitN(base, "/", 4)
-	if len(parts) >= 3 {
-		return parts[0] + "//" + parts[2] + href
-	}
-	return base
+	return cals, nil
 }

@@ -1,6 +1,7 @@
 package calendar
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -43,32 +44,39 @@ func FetchMonth(year, month int) ([]*Event, error) {
 }
 
 func fetchForAccount(acc *Account, start, end time.Time) ([]*Event, error) {
-	client, err := newBearerClient(acc.Username)
+	httpClient, err := newBearerClient(acc.Username)
 	if err != nil {
 		fmt.Printf("[calendar] %s: token missing, removing account\n", acc.Username)
 		RemoveAccount(acc.Username)
 		return nil, fmt.Errorf("auth: %w", err)
 	}
 
-	homeSet, err := discoverHomeSet(client, acc.URL)
+	ctx := context.Background()
+
+	conn, err := newCaldavConn(httpClient, acc.URL)
+	if err != nil {
+		return nil, err
+	}
+
+	homeSet, err := conn.discoverHomeSet(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("home-set discovery: %w", err)
 	}
 
-	cals, err := listCalendars(client, homeSet)
+	cals, err := conn.listCalendars(ctx, homeSet)
 	if err != nil {
 		return nil, fmt.Errorf("list calendars: %w", err)
 	}
 
 	var events []*Event
 	for _, cal := range cals {
-		icals, err := queryEvents(client, cal.Path, start, end)
+		icals, err := conn.queryEvents(ctx, cal.Path, start, end)
 		if err != nil {
 			fmt.Printf("[calendar] %s → %s: %v\n", acc.Username, cal.Name, err)
 			continue
 		}
-		for _, icalData := range icals {
-			evs, err := parseEvents(icalData, acc.Username, cal.Name, cal.Color)
+		for _, icalCal := range icals {
+			evs, err := parseEvents(icalCal, acc.Username, cal.Name, cal.Color)
 			if err != nil {
 				continue
 			}
