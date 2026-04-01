@@ -5,7 +5,7 @@ type Manager struct{}
 
 func New() *Manager { return &Manager{} }
 
-// Accounts returns all connected accounts (without passwords).
+// Accounts returns all connected accounts.
 func (m *Manager) Accounts() ([]map[string]string, error) {
 	accounts, err := ListAccounts()
 	if err != nil {
@@ -27,21 +27,8 @@ func (m *Manager) Events(year, month int) ([]*Event, error) {
 	return FetchMonth(year, month)
 }
 
-// AddAccount verifies CalDAV credentials and saves the account.
-func (m *Manager) AddAccount(name, url, username, password string) error {
-	acc := &Account{
-		Name:     name,
-		URL:      url,
-		Username: username,
-		Password: password,
-	}
-	if _, err := VerifyAccount(acc); err != nil {
-		return err
-	}
-	return SaveAccount(acc)
-}
-
-// RemoveAccount deletes a stored account.
+// RemoveAccount deletes a stored account and its keyring token.
 func (m *Manager) RemoveAccount(username string) error {
+	_ = DeleteToken(username) // best-effort
 	return RemoveAccount(username)
 }

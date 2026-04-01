@@ -16,11 +16,11 @@ import (
 func Calendar() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "calendar",
-		Short: "CalDAV calendar integration",
+		Short: "Google Calendar integration",
 	}
 	cmd.AddCommand(
 		calendarToggle(),
-		calendarAccount(),
+		calendarAuth(),
 		calendarSetup(),
 	)
 	return cmd
@@ -51,70 +51,22 @@ func calendarToggle() *cobra.Command {
 	}
 }
 
-func calendarAccount() *cobra.Command {
+func calendarAuth() *cobra.Command {
 	acct := &cobra.Command{
-		Use:   "account",
-		Short: "Manage CalDAV accounts",
+		Use:   "auth",
+		Short: "Manage Google Calendar accounts",
 	}
-
-	var flagName, flagURL, flagUsername, flagPassword string
-
-	addCmd := &cobra.Command{
-		Use:   "add",
-		Short: "Add a CalDAV account",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			r := bufio.NewReader(os.Stdin)
-
-			if flagURL == "" {
-				if flagUsername != "" && strings.Contains(flagUsername, "@gmail.com") {
-					flagURL = calendar.GoogleCalDAVURL(flagUsername)
-					fmt.Fprintf(os.Stderr, "Using Google CalDAV URL: %s\n", flagURL)
-				} else {
-					fmt.Fprint(os.Stderr, "CalDAV URL: ")
-					flagURL, _ = r.ReadString('\n')
-					flagURL = strings.TrimSpace(flagURL)
-				}
-			}
-			if flagUsername == "" {
-				fmt.Fprint(os.Stderr, "Username (email): ")
-				flagUsername, _ = r.ReadString('\n')
-				flagUsername = strings.TrimSpace(flagUsername)
-			}
-			if flagPassword == "" {
-				fmt.Fprint(os.Stderr, "Password (App Password for Google): ")
-				flagPassword, _ = r.ReadString('\n')
-				flagPassword = strings.TrimSpace(flagPassword)
-			}
-			if flagName == "" {
-				flagName = flagUsername
-			}
-
-			fmt.Fprintf(os.Stderr, "Verifying CalDAV connection to %s...\n", flagURL)
-			mgr := calendar.New()
-			if err := mgr.AddAccount(flagName, flagURL, flagUsername, flagPassword); err != nil {
-				return err
-			}
-			fmt.Printf("✓ Added account %s (%s)\n", flagName, flagUsername)
-			return nil
-		},
-	}
-	addCmd.Flags().StringVar(&flagName, "name", "", "Display name")
-	addCmd.Flags().StringVar(&flagURL, "url", "", "CalDAV URL")
-	addCmd.Flags().StringVar(&flagUsername, "username", "", "Username / email")
-	addCmd.Flags().StringVar(&flagPassword, "password", "", "Password / App Password")
-
-	acct.AddCommand(addCmd)
 
 	acct.AddCommand(&cobra.Command{
 		Use:   "list",
-		Short: "List configured accounts",
+		Short: "List connected accounts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			accounts, err := calendar.ListAccounts()
 			if err != nil {
 				return err
 			}
 			if len(accounts) == 0 {
-				fmt.Println("No accounts. Run: doot calendar account add")
+				fmt.Println("No accounts. Run: doot calendar auth add")
 				return nil
 			}
 			for _, a := range accounts {
@@ -129,7 +81,8 @@ func calendarAccount() *cobra.Command {
 		Short: "Remove an account",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := calendar.RemoveAccount(args[0]); err != nil {
+			mgr := calendar.New()
+			if err := mgr.RemoveAccount(args[0]); err != nil {
 				return err
 			}
 			fmt.Printf("Removed account %s\n", args[0])
@@ -141,33 +94,68 @@ func calendarAccount() *cobra.Command {
 }
 
 func calendarSetup() *cobra.Command {
-	return &cobra.Command{
+	setup := &cobra.Command{
 		Use:   "setup",
-		Short: "Show CalDAV setup instructions",
+		Short: "Setup and configuration",
+	}
+
+	var flagClientID, flagClientSecret string
+
+	credsCmd := &cobra.Command{
+		Use:   "credentials",
+		Short: "Store Google OAuth2 client credentials in the keyring",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			r := bufio.NewReader(os.Stdin)
+
+			if flagClientID == "" {
+				fmt.Fprint(os.Stderr, "Google OAuth2 Client ID: ")
+				flagClientID, _ = r.ReadString('\n')
+				flagClientID = strings.TrimSpace(flagClientID)
+			}
+			if flagClientSecret == "" {
+				fmt.Fprint(os.Stderr, "Google OAuth2 Client Secret: ")
+				flagClientSecret, _ = r.ReadString('\n')
+				flagClientSecret = strings.TrimSpace(flagClientSecret)
+			}
+			if flagClientID == "" || flagClientSecret == "" {
+				return fmt.Errorf("client ID and secret are required")
+			}
+
+			if err := calendar.StoreCredentials(flagClientID, flagClientSecret); err != nil {
+				return fmt.Errorf("failed to store credentials: %w", err)
+			}
+			fmt.Println("✓ Credentials stored in keyring (visible in Seahorse under 'doot')")
+			return nil
+		},
+	}
+	credsCmd.Flags().StringVar(&flagClientID, "client-id", "", "Google OAuth2 Client ID")
+	credsCmd.Flags().StringVar(&flagClientSecret, "client-secret", "", "Google OAuth2 Client Secret")
+
+	setup.AddCommand(credsCmd)
+
+	setup.AddCommand(&cobra.Command{
+		Use:   "instructions",
+		Short: "Show setup instructions",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Print(`CalDAV Calendar Setup
+			fmt.Print(`Google Calendar Setup
 =====================
 
-Google Calendar
----------------
-1. Enable 2-Factor Authentication on your Google account
-2. Go to: https://myaccount.google.com/apppasswords
-3. Create an App Password (select "Other" or "Mail")
-4. Copy the 16-character password (no spaces needed)
-5. Run: doot calendar account add --username you@gmail.com
+1. Go to: https://console.cloud.google.com/
+2. Create a project (or select an existing one)
+3. Enable the "Calendar API" (for CalDAV) or "People API" (for user info)
+4. Go to: APIs & Services → Credentials
+5. Create an OAuth 2.0 Client ID (Desktop app)
+6. Download or copy the Client ID and Client Secret
+7. Run: doot calendar setup credentials
 
-   The URL will be auto-detected for Gmail addresses:
-   https://apidata.google.com/caldav/v2/you@gmail.com/user
-
-Other CalDAV servers (Nextcloud, iCloud, Fastmail, etc.)
----------------------------------------------------------
-Run: doot calendar account add --url https://your-server/dav/calendars/user/ \
-       --username your@email.com
-
-iCloud:   https://caldav.icloud.com/
-Fastmail: https://caldav.fastmail.com/dav/calendars/
+Then sign in:
+  doot calendar toggle   (opens the calendar widget with a Sign In button)
+  — or —
+  Connect via the doot daemon (the widget will launch the browser flow)
 
 `)
 		},
-	}
+	})
+
+	return setup
 }

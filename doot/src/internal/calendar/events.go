@@ -42,26 +42,11 @@ func FetchMonth(year, month int) ([]*Event, error) {
 	return all, nil
 }
 
-// VerifyAccount tries to connect to the CalDAV server and discover its calendars.
-// Returns the resolved home-set URL on success.
-func VerifyAccount(acc *Account) (string, error) {
-	client := newHTTPClient(acc.Username, acc.Password)
-	homeSet, err := discoverHomeSet(client, acc.URL)
-	if err != nil {
-		return "", fmt.Errorf("CalDAV discovery failed: %w", err)
-	}
-	cals, err := listCalendars(client, homeSet)
-	if err != nil {
-		return "", fmt.Errorf("calendar list failed: %w", err)
-	}
-	if len(cals) == 0 {
-		return homeSet, fmt.Errorf("connected but no calendars found at %s", homeSet)
-	}
-	return homeSet, nil
-}
-
 func fetchForAccount(acc *Account, start, end time.Time) ([]*Event, error) {
-	client := newHTTPClient(acc.Username, acc.Password)
+	client, err := newBearerClient(acc.Username)
+	if err != nil {
+		return nil, fmt.Errorf("auth: %w", err)
+	}
 
 	homeSet, err := discoverHomeSet(client, acc.URL)
 	if err != nil {

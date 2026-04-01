@@ -8,12 +8,11 @@ import (
 	"strings"
 )
 
-// Account holds CalDAV credentials for one calendar server.
+// Account holds non-secret CalDAV account info (token lives in keyring).
 type Account struct {
 	Name     string `json:"name"`     // Display name, e.g. "Work" or "Personal"
 	URL      string `json:"url"`      // CalDAV principal or home-set URL
 	Username string `json:"username"` // Usually the account email
-	Password string `json:"password"` // App password or regular password
 }
 
 func accountsDir() string {
@@ -86,5 +85,5 @@ func RemoveAccount(username string) error {
 
 // GoogleCalDAVURL returns the standard Google CalDAV URL for a Gmail address.
 func GoogleCalDAVURL(email string) string {
-	return "https://apidata.google.com/caldav/v2/" + email + "/user"
+	return "https://apidata.googleusercontent.com/caldav/v2/" + email + "/user"
 }

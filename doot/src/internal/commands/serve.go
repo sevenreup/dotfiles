@@ -46,7 +46,7 @@ func registerCalendarHandlers(srv *server.Server) {
 		return map[string]string{"status": "ok"}, nil
 	})
 
-	// calendar.accounts — return list of connected accounts (no passwords)
+	// calendar.accounts — return list of connected accounts
 	srv.Handle("calendar.accounts", func(_ json.RawMessage) (any, error) {
 		return mgr.Accounts()
 	})
@@ -63,31 +63,27 @@ func registerCalendarHandlers(srv *server.Server) {
 		return mgr.Events(p.Year, p.Month)
 	})
 
-	// calendar.account.add — verify CalDAV credentials and save account
-	srv.Handle("calendar.account.add", func(params json.RawMessage) (any, error) {
-		var p struct {
-			Name     string `json:"name"`
-			URL      string `json:"url"`
-			Username string `json:"username"`
-			Password string `json:"password"`
+	// calendar.auth.start — launch OAuth2 browser flow asynchronously
+	srv.Handle("calendar.auth.start", func(_ json.RawMessage) (any, error) {
+		if !calendar.HasCredentials() {
+			return nil, fmt.Errorf("Google OAuth credentials not configured — run: doot calendar setup credentials")
 		}
-		if err := json.Unmarshal(params, &p); err != nil {
-			return nil, fmt.Errorf("invalid params: %w", err)
-		}
-		if p.URL == "" || p.Username == "" || p.Password == "" {
-			return nil, fmt.Errorf("url, username and password are required")
-		}
-		if p.Name == "" {
-			p.Name = p.Username
-		}
-		if err := mgr.AddAccount(p.Name, p.URL, p.Username, p.Password); err != nil {
-			return nil, err
-		}
-		return map[string]string{"status": "added", "username": p.Username}, nil
+		go func() {
+			result := <-calendar.StartAuthFlow()
+			if result.Err != nil {
+				srv.Broadcast("calendar.authError", map[string]string{"error": result.Err.Error()})
+				return
+			}
+			srv.Broadcast("calendar.authComplete", map[string]string{
+				"email": result.Account.Username,
+				"name":  result.Account.Name,
+			})
+		}()
+		return map[string]string{"status": "started"}, nil
 	})
 
-	// calendar.account.remove — remove a stored account
-	srv.Handle("calendar.account.remove", func(params json.RawMessage) (any, error) {
+	// calendar.auth.remove — remove an account and its token
+	srv.Handle("calendar.auth.remove", func(params json.RawMessage) (any, error) {
 		var p struct {
 			Username string `json:"username"`
 		}

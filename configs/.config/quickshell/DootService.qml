@@ -28,6 +28,8 @@ Singleton {
     signal micChanged(real volume, bool muted)
 
     signal calendarToggled()
+    signal calendarAuthComplete(string email, string name)
+    signal calendarAuthError(string errorMsg)
 
     // ── Socket ────────────────────────────────────────────────────────────────
 
@@ -104,6 +106,8 @@ Singleton {
         case "volume":             root.volumeChanged(d.volume ?? 0, d.muted ?? false);              break;
         case "mic":                root.micChanged(d.volume ?? 0, d.muted ?? false);                 break;
         case "calendar.toggle":    root.calendarToggled();                                           break;
+        case "calendar.authComplete": root.calendarAuthComplete(d.email ?? "", d.name ?? "");       break;
+        case "calendar.authError":    root.calendarAuthError(d.error ?? "unknown error");            break;
         }
     }
 

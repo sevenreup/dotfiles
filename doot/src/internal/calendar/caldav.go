@@ -16,28 +16,6 @@ type CalendarInfo struct {
 	Color string
 }
 
-// newHTTPClient returns an http.Client with Basic Auth transport.
-func newHTTPClient(username, password string) *http.Client {
-	return &http.Client{
-		Transport: &basicAuthTransport{
-			username: username,
-			password: password,
-			inner:    http.DefaultTransport,
-		},
-	}
-}
-
-type basicAuthTransport struct {
-	username, password string
-	inner              http.RoundTripper
-}
-
-func (t *basicAuthTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	r2 := r.Clone(r.Context())
-	r2.SetBasicAuth(t.username, t.password)
-	return t.inner.RoundTrip(r2)
-}
-
 // ──────────────────────────────────────────────────────────────────────────────
 // PROPFIND: discover calendar home-set
 // ──────────────────────────────────────────────────────────────────────────────
