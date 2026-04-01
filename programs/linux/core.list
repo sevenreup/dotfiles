@@ -1,29 +1,38 @@
+# Polkit
+p hyprpolkitagent
+
 # System
 p waybar
-p rofi
+p fuzzel
 p swaync
 p hyprlock
 p hypridle
-y google-chrome
-y wlogout
-p nerd-fonts
+p nwg-displays
 p brightnessctl
+p wl-clipboard
+p cliphist
+p playerctl
+y wlogout
+y google-chrome
+y nerd-fonts
 
 # Bluetooth
 p blueman
 p bluez
 p bluez-utils
 
-# Editors
+# Network
+p networkmanager
+y nmrs
+
+# Dev stuff
 y zed
 y cursor-bin
+y android-studio
+y github-desktop-bin
 
 # Screenshots
-# y grim # screenshot tool
-# y slurp # region selection
-y hyprshot # with this I dont need grim and slurp
-y hyprshot # annotation
-y cliphist
+y hyprshot
 
-# Others
-y nwg-displays
+# Pyprland
+y pyprland

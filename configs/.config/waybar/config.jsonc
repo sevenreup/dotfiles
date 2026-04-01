@@ -21,7 +21,7 @@
   "modules-right": ["custom/swaync", "network", "bluetooth", "custom/power"],
   "custom/launcher": {
     "format": "󰣇",
-    "on-click": "rofi -show drun",
+    "on-click": "fuzzel",
     "tooltip": false,
   },
   "hyprland/taskbar": {
@@ -103,7 +103,7 @@
     "format-wifi": "󰤨",
     "format-disconnected": "󰤵 ",
     "format-ethernet": "󰘀 ",
-    "on-click": "nm-connection-editor",
+    "on-click": "nmrs",
     "tooltip-format-wifi": "{essid} ({signalStrength}%)
 IP: {ipaddr}",
   },
