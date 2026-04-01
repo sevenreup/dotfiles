@@ -27,6 +27,8 @@ Singleton {
     signal volumeChanged(real volume, bool muted)
     signal micChanged(real volume, bool muted)
 
+    signal calendarToggled()
+
     // ── Socket ────────────────────────────────────────────────────────────────
 
     Socket {
@@ -98,9 +100,10 @@ Singleton {
     function _handleEvent(msg) {
         const d = msg.data || {};
         switch (msg.event) {
-        case "brightness": root.brightnessChanged(d.percent ?? 0);           break;
-        case "volume":     root.volumeChanged(d.volume ?? 0, d.muted ?? false); break;
-        case "mic":        root.micChanged(d.volume ?? 0, d.muted ?? false);    break;
+        case "brightness":         root.brightnessChanged(d.percent ?? 0);                           break;
+        case "volume":             root.volumeChanged(d.volume ?? 0, d.muted ?? false);              break;
+        case "mic":                root.micChanged(d.volume ?? 0, d.muted ?? false);                 break;
+        case "calendar.toggle":    root.calendarToggled();                                           break;
         }
     }
 

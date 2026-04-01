@@ -11,6 +11,7 @@ func Root() *cobra.Command {
 	root.AddCommand(
 		Serve(),
 		Waybar(),
+		Calendar(),
 	)
 
 	return root

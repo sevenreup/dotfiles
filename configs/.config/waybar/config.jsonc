@@ -81,7 +81,11 @@
     },
   },
 
-  "clock": { "format": "{:%H:%M · %a, %d/%m}" },
+  "clock": {
+    "format": "{:%H:%M · %a, %d/%m}",
+    "on-click": "/home/ricedao/.local/bin/doot calendar toggle",
+    "tooltip": false,
+  },
 
   "custom/performance": {
     "format": "󰓅",

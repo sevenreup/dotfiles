@@ -1,6 +1,7 @@
 import Quickshell
 
 ShellRoot {
-    DootService {}
+    DootService { id: dootService }
     Osd {}
+    Calendar {}
 }
