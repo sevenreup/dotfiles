@@ -61,10 +61,11 @@ func ListAccounts() ([]*Account, error) {
 	}
 	var accounts []*Account
 	for _, e := range entries {
-		if filepath.Ext(e.Name()) != ".json" {
+		name := e.Name()
+		if filepath.Ext(name) != ".json" || strings.HasSuffix(name, ".sync.json") {
 			continue
 		}
-		username := strings.TrimSuffix(e.Name(), ".json")
+		username := strings.TrimSuffix(name, ".json")
 		acc, err := LoadAccount(username)
 		if err != nil {
 			continue

@@ -1,6 +1,7 @@
 package calendar
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"time"
@@ -118,4 +119,35 @@ func propStr(comp *ical.Component, name string) string {
 		return ""
 	}
 	return p.Value
+}
+
+// encodeIcal serialises a decoded *ical.Calendar back to its text form for
+// caching. Re-parsing with ical.NewDecoder is lossless for the properties we
+// care about.
+func encodeIcal(cal *ical.Calendar) (string, error) {
+	var buf bytes.Buffer
+	if err := ical.NewEncoder(&buf).Encode(cal); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// decodeIcal is the inverse of encodeIcal.
+func decodeIcal(raw string) (*ical.Calendar, error) {
+	return ical.NewDecoder(strings.NewReader(raw)).Decode()
+}
+
+// eventInRange reports whether ev starts within [start, end).
+func eventInRange(ev *Event, start, end time.Time) bool {
+	var t time.Time
+	var err error
+	if ev.AllDay {
+		t, err = time.ParseInLocation("2006-01-02", ev.Start, time.Local)
+	} else {
+		t, err = time.Parse(time.RFC3339, ev.Start)
+	}
+	if err != nil {
+		return false
+	}
+	return !t.Before(start) && t.Before(end)
 }

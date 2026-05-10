@@ -2,12 +2,13 @@ package calendar
 
 import (
 	"context"
+	"encoding/xml"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
-	ical "github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav/caldav"
 )
 
@@ -21,7 +22,9 @@ type CalendarInfo struct {
 // caldavConn wraps a go-webdav CalDAV client for a single account.
 type caldavConn struct {
 	client        *caldav.Client
-	principalPath string // path-only form of the principal URL (starts with "/")
+	httpClient    *http.Client // kept for raw requests (e.g. sync-token PROPFIND)
+	origin        string       // scheme + host, e.g. "https://apidata.googleusercontent.com"
+	principalPath string       // path-only form of the principal URL (starts with "/")
 }
 
 // newCaldavConn creates a CalDAV client. go-webdav's ResolveHref treats paths
@@ -37,7 +40,12 @@ func newCaldavConn(httpClient *http.Client, principalURL string) (*caldavConn, e
 	if err != nil {
 		return nil, fmt.Errorf("caldav client: %w", err)
 	}
-	return &caldavConn{client: c, principalPath: u.RequestURI()}, nil
+	return &caldavConn{
+		client:        c,
+		httpClient:    httpClient,
+		origin:        origin,
+		principalPath: u.RequestURI(),
+	}, nil
 }
 
 func (c *caldavConn) discoverHomeSet(ctx context.Context) (string, error) {
@@ -60,8 +68,10 @@ func (c *caldavConn) listCalendars(ctx context.Context, homeSet string) ([]Calen
 	return result, nil
 }
 
-func (c *caldavConn) queryEvents(ctx context.Context, calPath string, start, end time.Time) ([]*ical.Calendar, error) {
-	query := &caldav.CalendarQuery{
+// queryWindow fetches all calendar objects (ETags + iCal data) whose VEVENT
+// overlaps [start, end) using a calendar-query REPORT.
+func (c *caldavConn) queryWindow(ctx context.Context, calPath string, start, end time.Time) ([]caldav.CalendarObject, error) {
+	return c.client.QueryCalendar(ctx, calPath, &caldav.CalendarQuery{
 		CompRequest: caldav.CalendarCompRequest{
 			Name:     "VCALENDAR",
 			AllProps: true,
@@ -78,16 +88,94 @@ func (c *caldavConn) queryEvents(ctx context.Context, calPath string, start, end
 				End:   end,
 			}},
 		},
-	}
-	objects, err := c.client.QueryCalendar(ctx, calPath, query)
+	})
+}
+
+// fetchSyncToken does a Depth:0 PROPFIND to retrieve the current DAV:sync-token
+// for a calendar collection. This is called after windowed initial population to
+// anchor incremental sync going forward.
+func (c *caldavConn) fetchSyncToken(ctx context.Context, calPath string) (string, error) {
+	const body = `<?xml version="1.0" encoding="UTF-8"?>` +
+		`<D:propfind xmlns:D="DAV:"><D:prop><D:sync-token/></D:prop></D:propfind>`
+
+	req, err := http.NewRequestWithContext(ctx, "PROPFIND", c.origin+calPath, strings.NewReader(body))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	cals := make([]*ical.Calendar, 0, len(objects))
-	for i := range objects {
-		if objects[i].Data != nil {
-			cals = append(cals, objects[i].Data)
+	req.Header.Set("Content-Type", "application/xml; charset=utf-8")
+	req.Header.Set("Depth", "0")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	type xmlProp struct {
+		SyncToken string `xml:"sync-token"`
+	}
+	type xmlPropstat struct {
+		Prop   xmlProp `xml:"prop"`
+		Status string  `xml:"status"`
+	}
+	type xmlResponse struct {
+		Propstats []xmlPropstat `xml:"propstat"`
+	}
+	type xmlMultistatus struct {
+		Responses []xmlResponse `xml:"response"`
+	}
+
+	var ms xmlMultistatus
+	if err := xml.NewDecoder(resp.Body).Decode(&ms); err != nil {
+		return "", fmt.Errorf("parse sync-token response: %w", err)
+	}
+	for _, r := range ms.Responses {
+		for _, ps := range r.Propstats {
+			if strings.Contains(ps.Status, "200") && ps.Prop.SyncToken != "" {
+				return ps.Prop.SyncToken, nil
+			}
 		}
 	}
-	return cals, nil
+	return "", fmt.Errorf("sync-token not found in PROPFIND response")
+}
+
+// syncCalendar performs a sync-collection REPORT (RFC 6578). It only requests
+// ETags so the response stays small. Pass an empty syncToken for the initial
+// sync, which returns all objects.
+func (c *caldavConn) syncCalendar(ctx context.Context, calPath, syncToken string) (*caldav.SyncResponse, error) {
+	return c.client.SyncCollection(ctx, calPath, &caldav.SyncQuery{
+		SyncToken:   syncToken,
+		CompRequest: caldav.CalendarCompRequest{Name: "VCALENDAR"},
+	})
+}
+
+const fetchBatchSize = 50
+
+// fetchObjects retrieves full calendar data for a list of object paths via
+// calendar-multiget, sending at most fetchBatchSize hrefs per request.
+func (c *caldavConn) fetchObjects(ctx context.Context, calPath string, paths []string) ([]caldav.CalendarObject, error) {
+	compRequest := caldav.CalendarCompRequest{
+		Name:     "VCALENDAR",
+		AllProps: true,
+		Comps: []caldav.CalendarCompRequest{{
+			Name:     "VEVENT",
+			AllProps: true,
+		}},
+	}
+	var all []caldav.CalendarObject
+	for i := 0; i < len(paths); i += fetchBatchSize {
+		end := i + fetchBatchSize
+		if end > len(paths) {
+			end = len(paths)
+		}
+		objects, err := c.client.MultiGetCalendar(ctx, calPath, &caldav.CalendarMultiGet{
+			Paths:       paths[i:end],
+			CompRequest: compRequest,
+		})
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, objects...)
+	}
+	return all, nil
 }

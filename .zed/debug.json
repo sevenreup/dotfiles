@@ -1,0 +1,17 @@
+// Project-local debug tasks
+//
+// For more documentation on how to configure debug tasks,
+// see: https://zed.dev/docs/debugger
+[
+  {
+    "adapter": "Delve",
+    "label": "dooty",
+    "request": "launch",
+    "mode": "debug",
+    "program": "./doot/src/cmd/doot",
+    "cwd": "./doot/src/cmd/doot",
+    "args": ["serve"],
+    "buildFlags": [],
+    "env": {},
+  },
+]
