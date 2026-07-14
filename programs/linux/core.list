@@ -16,6 +16,11 @@ y wlogout
 y google-chrome
 y nerd-fonts
 
+# file mgt
+p dolphin
+p ark
+p dolphin-plugins
+
 # Bluetooth
 p blueman
 p bluez
@@ -36,3 +41,7 @@ y hyprshot
 
 # Pyprland
 y pyprland
+
+# Theming
+y qt6ct-kde
+y kvantum
