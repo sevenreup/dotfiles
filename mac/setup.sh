@@ -54,4 +54,20 @@ else
     echo -e "${GREEN}✓ Spicetify installed successfully!${NC}"
 fi
 
+# Symlink shared zsh entry point
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ -e "$HOME/.zshrc" ] || [ -L "$HOME/.zshrc" ]; then
+    if [ -L "$HOME/.zshrc" ] && [ "$(readlink "$HOME/.zshrc")" = "$SCRIPT_DIR/configs/.zshrc" ]; then
+        echo -e "${GREEN}✓ ~/.zshrc already linked${NC}"
+    else
+        echo -e "${YELLOW}Backing up existing ~/.zshrc to ~/.zshrc.backup...${NC}"
+        mv "$HOME/.zshrc" "$HOME/.zshrc.backup"
+        ln -s "$SCRIPT_DIR/configs/.zshrc" "$HOME/.zshrc"
+        echo -e "${GREEN}✓ Linked ~/.zshrc${NC}"
+    fi
+else
+    ln -s "$SCRIPT_DIR/configs/.zshrc" "$HOME/.zshrc"
+    echo -e "${GREEN}✓ Linked ~/.zshrc${NC}"
+fi
+
 echo -e "${GREEN}✓ macOS setup complete!${NC}"
