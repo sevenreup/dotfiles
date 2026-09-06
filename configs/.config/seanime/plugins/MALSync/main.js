@@ -36,6 +36,9 @@ function init() {
 		const clientIdRef = ctx.fieldRef<string>($storage.get("malsync.clientId") || "");
 		const clientSecretRef = ctx.fieldRef<string>($storage.get("malsync.clientSecret") || "");
 		const authCodeRef = ctx.fieldRef<string>($storage.get("malsync.authCode") || "");
+		const accessTokenRef = ctx.fieldRef<string>($storage.get("malsync.accessToken") || "");
+		const refreshTokenRef = ctx.fieldRef<string>($storage.get("malsync.refreshToken") || "");
+		const expiresAtRef = ctx.fieldRef<string>(String($storage.get("malsync.expiresAt") || ""));
 
 		// Preferences
 		const liveSyncRef = ctx.fieldRef<boolean>($storage.get("malsync.liveSync") ?? true);
@@ -94,6 +97,20 @@ ACTION: ${action} | ANIME: ${title}
 
 		function $_wait(ms: number): Promise<void> {
 			return new Promise((resolve) => ctx.setTimeout(resolve, ms));
+		}
+
+		function parseExpiresAt(value: string): number | null {
+			const input = value.trim();
+			if (!input) return null;
+
+			const numericValue = Number(input);
+			if (Number.isFinite(numericValue)) {
+				// Epoch values below 1e12 are assumed to be seconds.
+				return numericValue < 1e12 ? numericValue * 1000 : numericValue;
+			}
+
+			const dateValue = Date.parse(input);
+			return Number.isNaN(dateValue) ? null : dateValue;
 		}
 
 		function normalizeStatusToMal(statusAL: string): string | null {
@@ -198,6 +215,17 @@ ACTION: ${action} | ANIME: ${title}
 					refreshToken: data.refresh_token,
 					expiresAt: expiresAt,
 				};
+				isAuthenticated.set(true);
+				statusText.set("Authenticated");
+				statusIntent.set("success");
+			},
+
+			saveManualToken(accessToken: string, refreshToken: string, expiresAt: number) {
+				$storage.set("malsync.accessToken", accessToken);
+				$storage.set("malsync.refreshToken", refreshToken);
+				$storage.set("malsync.expiresAt", expiresAt);
+
+				this.token = { accessToken, refreshToken, expiresAt };
 				isAuthenticated.set(true);
 				statusText.set("Authenticated");
 				statusIntent.set("success");
@@ -355,6 +383,29 @@ ACTION: ${action} | ANIME: ${title}
 				addLog("Please enter the Auth Code", "warn");
 				settingsFeedback.set("⚠️ Please paste the Auth Code first.");
 			}
+		});
+
+		ctx.registerEventHandler("connect-manual-token", () => {
+			const accessToken = accessTokenRef.current.trim();
+			const refreshToken = refreshTokenRef.current.trim();
+			const expiresAt = parseExpiresAt(expiresAtRef.current);
+
+			if (!accessToken || !refreshToken || expiresAt === null) {
+				addLog("Access token, refresh token, and a valid expiry are required", "warn");
+				settingsFeedback.set("⚠️ Enter both tokens and a valid expiry.");
+				return;
+			}
+
+			if (expiresAt <= Date.now()) {
+				addLog("The manually entered access token is already expired", "warn");
+				settingsFeedback.set("⚠️ expiresAt must be in the future.");
+				return;
+			}
+
+			tokenManager.saveManualToken(accessToken, refreshToken, expiresAt);
+			expiresAtRef.setValue(String(expiresAt));
+			addLog("Manual tokens saved", "success");
+			settingsFeedback.set("✅ Manual tokens saved. Connected!");
 		});
 
 		ctx.registerEventHandler("clear-logs", () => {
@@ -563,6 +614,14 @@ ACTION: ${action} | ANIME: ${title}
 
 					tray.input({ fieldRef: authCodeRef, placeholder: "Paste Code or Full URL here", label: "Auth Code" }),
 					tray.button({ label: "Connect", onClick: "connect-auth", intent: "success" }),
+
+					tray.div([], { style: { height: "1px", background: "#444", margin: "10px 0" } }),
+					tray.text("Manual Token Setup", { style: { fontWeight: "bold" } }),
+					tray.text("Skip browser authorization by entering an existing MAL token set. Client ID and Secret are still needed when the access token refreshes.", { style: { fontSize: "11px", opacity: "0.7" } }),
+					tray.input({ fieldRef: accessTokenRef, placeholder: "Access token", label: "Access Token" }),
+					tray.input({ fieldRef: refreshTokenRef, placeholder: "Refresh token", label: "Refresh Token" }),
+					tray.input({ fieldRef: expiresAtRef, placeholder: "Epoch seconds, milliseconds, or ISO date", label: "Expires At" }),
+					tray.button({ label: "Save Manual Tokens", onClick: "connect-manual-token", intent: "success" }),
 				], { gap: 2 });
 			}
 

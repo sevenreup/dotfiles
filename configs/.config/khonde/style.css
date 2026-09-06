@@ -1,0 +1,97 @@
+/* Retro pixel-terminal palette: pale cream background, burnt-orange
+   highlight, dark slate text, flat square blocks (no gradients, no
+   shadows). Active workspace is an outlined badge; active window is a
+   filled block — matching the reference desktop's taskbar. */
+
+window {
+    padding: 0px 22px;
+    background-color: transparent;
+}
+
+.khoma-container {
+    padding: 8px;
+    background-color: #ece1bf;
+    border: 1px solid #1a1a1a;
+    border-radius: 10px;
+}
+
+/* Direction-aware: PanelWindow carries a khoma-anchor-<edge> class per
+   anchored edge (see shell/panel.go), so a full-width top bar ends up with
+   BOTH khoma-anchor-top AND khoma-anchor-left AND khoma-anchor-right at
+   once. Each rule below touches only ONE side/corner property, never the
+   border/border-radius shorthand, so the three active rules compose
+   instead of clobbering each other's last-declared shorthand value.
+   Net effect: any screen edge the panel is actually anchored to gets no
+   border and stays square (it's flush against the monitor edge); any edge
+   left floating gets a border, and a corner rounds only when both of its
+   adjacent edges are floating. */
+window.khoma-anchor-top .khoma-container {
+    border-top: none;
+}
+
+window.khoma-anchor-bottom .khoma-container {
+    border-bottom: none;
+}
+
+window.khoma-anchor-left .khoma-container {
+    border-left: none;
+}
+
+window.khoma-anchor-right .khoma-container {
+    border-right: none;
+}
+
+window.khoma-anchor-top.khoma-anchor-left .khoma-container {
+    border-top-left-radius: 0px;
+}
+
+window.khoma-anchor-top.khoma-anchor-right .khoma-container {
+    border-top-right-radius: 0px;
+}
+
+window.khoma-anchor-bottom.khoma-anchor-left .khoma-container {
+    border-bottom-left-radius: 0px;
+}
+
+window.khoma-anchor-bottom.khoma-anchor-right .khoma-container {
+    border-bottom-right-radius: 0px;
+}
+
+.khoma-bar {
+    font-family: "Terminus", "Fixed", monospace;
+}
+
+.ws {
+    padding: 1px 4px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    color: #33505c;
+    font-weight: 700;
+}
+
+.ws-active {
+    border-color: #33505c;
+    background-color: #c15a3a;
+}
+
+.taskitem {
+    padding: 2px 4px;
+    border-radius: 3px;
+    color: #33505c;
+}
+
+.taskitem-active {
+    background-color: #c15a3a;
+    color: #ece1bf;
+}
+
+.tray {
+    color: #33505c;
+    margin: 0 2px;
+}
+
+.clock {
+    font-weight: 700;
+    color: #33505c;
+    padding: 0 4px;
+}
