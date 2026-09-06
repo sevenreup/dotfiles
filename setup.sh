@@ -27,6 +27,10 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     "$SCRIPT_DIR/mac/setup.sh" || echo -e "${RED}macOS setup script failed.${NC}"
 elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
     echo -e "${BLUE}Detected Windows. Running Windows-specific setup...${NC}"
+    # Without this, Git Bash's `ln -s` silently copies files/dirs instead of
+    # creating real NTFS symlinks, which then fails our -L verification below.
+    # Requires Developer Mode (or admin) for SeCreateSymbolicLinkPrivilege.
+    export MSYS=winsymlinks:nativestrict
     "$SCRIPT_DIR/windows/setup.sh" || echo -e "${RED}Windows setup script failed.${NC}"
 fi
 
